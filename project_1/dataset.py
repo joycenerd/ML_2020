@@ -1,15 +1,28 @@
 import logging
+import csv
 import numpy as np
 from random import gauss
 from torch.utils.data import Dataset,DataLoader,Subset
+from pathlib import Path
+from opt import parse_args
+
+opt=parse_args()
+
+def data_generator():
+    x=np.linspace(-3,3,20)
+    epsilon=[gauss(0,1) for i in range(20)]
+    y=2*x+epsilon
+    f=open('data.csv','w')
+    writer=csv.writer(f)
+    for i in range(20):
+        writer.writerow([x[i],y[i]])
 
 class RegressionDataset(Dataset):
     def __init__(self):
-        self.x=np.linspace(-3,3,20)
-        print(self.x)
-        epsilon=[gauss(0,1) for i in range(20)]
-        self.y=2*self.x+epsilon
-
+        data=np.genfromtxt('data.csv',delimiter=',')
+        self.x=data[:,0]
+        self.y=data[:,1]
+    
     def __len__(self):
         return len(self.x)
     

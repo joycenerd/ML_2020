@@ -3,218 +3,180 @@ import copy
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
-from torch.utils.data import DataLoader,random_split
+from torch.utils.data import DataLoader,random_split,Subset
 from sklearn.model_selection import LeaveOneOut,KFold
-from torch.autograd import Variable
 from pathlib import Path
-from dataset import RegressionDataset,DataSplit
-from model import LinearRegressionModel
+from dataset import data_generator,RegressionDataset
 from opt import parse_args
-from utils.loss import RMSELoss
-
 
 opt=parse_args()
 
-##########          Testing          ##########
-def test(test_set,model):
-    test_loader=DataLoader(test_set,batch_size=1,num_workers=1)
+def RMSE_loss(yhat,y):
+    # print(yhat)
+    # print(y)
+    mse=((yhat - y) ** 2).sum() / yhat.data.nelement()
+    return torch.sqrt(mse)
 
-    criterion=RMSELoss()
-    testing_loss=0.0
+def linear_regression(x,weight):
+    outputs=[]
+    # print(weight)
+    # print(x.size())
+    for i in x:
+        # print(i)
+        out=i.view([1,len(i)]).mm(weight)
+        outputs.append(out.numpy()) 
+    # print(outputs)
+    return outputs
 
-    model=model.cuda(opt.cuda_devices)
-    model.eval()
+def get_best_weight(x,y):
+    Q,R=torch.qr(x)
+    pseudo_inv=R.pinverse().mm(Q.t())
+    weight=torch.mm(pseudo_inv,y)
+    return weight
 
-    for i,(inputs,labels) in enumerate(test_loader):
-        inputs=Variable(inputs.cuda(opt.cuda_devices))
-        labels=Variable(labels.cuda(opt.cuda_devices))
-        inputs=inputs.view([inputs.size(0),1])
-        labels=labels.view([labels.size(0),1])
+def get_poly_features(x,degree):
+    poly_x=[x**n for n in range(1,degree+1)]
+    # print
 
-
-        outputs=model(inputs)
-        loss=criterion(outputs,labels)
-
-        testing_loss+=loss.item()*inputs.size(0)
-
-    testing_loss=testing_loss/(len(test_loader)*1)
-    print(f'testing_loss: {testing_loss:.4f}')
-
-def loss_visualization(training_loss,valid_loss,fname):
-    plt.figure(figsize=[8,6])
-    plt.plot(training_loss,'r',linewidth=3.0)
-    plt.plot(valid_loss,'b',linewidth=3.0)
-    plt.legend(['Training loss','Validation loss'],fontsize=18)
-    plt.xlabel('Epochs',fontsize=16)
-    plt.ylabel('Loss',fontsize=16)
-    plt.title('Loss Curves',fontsize=16)
-    plt.savefig(Path("./figure").joinpath(fname))
-
-def five_fold_training(train_set,model):
-    criterion=RMSELoss()
-    learning_rate=opt.lr
-    optimizer=torch.optim.SGD(model.parameters(),lr=learning_rate)
-
+def kf_training(dataset):
     kf=KFold(n_splits=5,random_state=None,shuffle=False)
-    fold_sz=int(train_set.__len__()*0.2)
 
     total_training_loss=0.0
     total_valid_loss=0.0
+    total_weight=np.empty((2,1))
 
-    for train_index,valid_index in kf.split(train_set):
-        split=DataSplit(train_set,train_index,valid_index)
-        train_loader,valid_loader=split.get_data_loader(fold_sz*4,fold_sz)
+    for train_idx,valid_idx in kf.split(dataset):
+        train_set=Subset(dataset,train_idx)
+        valid_set=Subset(dataset,valid_idx)
 
-        training_loss=0.0
-        valid_loss=0.0
+        train_X=[]
+        train_Y=[]
 
-        for i,(inputs,labels) in enumerate(train_loader):
-            inputs=Variable(inputs.cuda(opt.cuda_devices))
-            inputs=inputs.view([inputs.size(0),1])
-            labels=Variable(labels.cuda(opt.cuda_devices))
-            labels=labels.view([labels.size(0),1])
+        for i,(inputs,labels) in enumerate(train_set):
+            train_X.append(inputs)
+            train_Y.append(labels)
+        newrow=np.ones(len(train_X))
+        train_X=np.vstack([train_X,newrow])
+        train_X=torch.FloatTensor(train_X)
+        train_Y=torch.FloatTensor(train_Y)
+        train_X=train_X.t()
+        train_Y=train_Y.view([train_Y.size(0),1])
+            
+        weight=get_best_weight(train_X,train_Y)
+        total_weight+=weight.numpy()
 
-            optimizer.zero_grad()
-            outputs=model(inputs)
-            loss=criterion(outputs,labels)
-            loss.backward()
-            optimizer.step()
+        outputs=linear_regression(train_X,weight)
+        outputs=torch.FloatTensor(outputs)
 
-            training_loss+=loss.item()*inputs.size(0)
-        
-        training_loss=training_loss/(len(train_loader)*inputs.size(0))
-        total_training_loss+=training_loss
+        loss=RMSE_loss(outputs,train_Y)
+        total_training_loss+=loss/train_X.size(0)
 
-        model.eval()
+        valid_X=[]
+        valid_Y=[]
 
-        for i,(inputs,labels) in enumerate(valid_loader):
-            inputs=inputs.cuda(opt.cuda_devices)
-            labels=labels.cuda(opt.cuda_devices)
-            inputs=inputs.view([inputs.size(0),1])
-            labels=labels.view([labels.size(0),1])
+        for i,(inputs,labels) in enumerate(valid_set):
+            valid_X.append(inputs)
+            valid_Y.append(labels)
+        newrow=np.ones(len(valid_X))
+        valid_X=np.vstack([valid_X,newrow])
+        valid_X=torch.FloatTensor(valid_X)
+        valid_Y=torch.FloatTensor(valid_Y)
+        valid_X=valid_X.t()
+        valid_Y=valid_Y.view([valid_Y.size(0),1])
 
-            outputs=model(inputs)
-            loss=criterion(outputs,labels)
+        outputs=linear_regression(valid_X,weight)
+        outputs=torch.FloatTensor(outputs)
 
-        valid_loss=loss.item()/len(valid_loader)
-        total_valid_loss+=valid_loss
-    
-    avg_training_loss=total_training_loss/5
-    avg_valid_loss=total_valid_loss/5
+        loss=RMSE_loss(outputs,valid_Y)
+        total_valid_loss+=loss/valid_X.size(0)
 
-    return model,avg_training_loss,avg_valid_loss
+    best_weight=total_weight/dataset.__len__()
+    avg_training_loss=total_training_loss/dataset.__len__()
+    avg_valid_loss=total_valid_loss/dataset.__len__()
 
-def loo_training(train_set,model):
-    criterion=RMSELoss()
-    learning_rate=opt.lr
-    optimizer=torch.optim.SGD(model.parameters(),lr=learning_rate)
+    print(f'training_loss: {avg_training_loss:.4f}\tvalid_loss: {avg_valid_loss:.4f}\n')
 
+    return best_weight
+
+
+def loo_train(dataset):
     loo=LeaveOneOut()
 
     total_training_loss=0.0
     total_valid_loss=0.0
+    total_weight=np.empty((2,1))
 
-    for train_idx,valid_idx in loo.split(train_set):
-        split=DataSplit(train_set,train_idx,valid_idx)
-        train_loader,valid_loader=split.get_data_loader(train_set.__len__()-1,1)
+    for train_idx,valid_idx in loo.split(dataset):
+        train_set=Subset(dataset,train_idx)
+        valid_set=Subset(dataset,valid_idx)
 
-        training_loss=0.0
+        train_X=[]
+        train_Y=[]
 
-        for i,(inputs,labels) in enumerate(train_loader):
-            inputs=Variable(inputs.cuda(opt.cuda_devices))
-            inputs=inputs.view([inputs.size(0),1])
-            labels=Variable(labels.cuda(opt.cuda_devices))
-            labels=labels.view([labels.size(0),1])
+        for i,(inputs,labels) in enumerate(train_set):
+            train_X.append(inputs)
+            train_Y.append(labels)
+        newrow=np.ones(len(train_X))
+        train_X=np.vstack([train_X,newrow])
+        train_X=torch.FloatTensor(train_X)
+        train_Y=torch.FloatTensor(train_Y)
+        train_X=train_X.t()
+        train_Y=train_Y.view([train_Y.size(0),1])
 
-            optimizer.zero_grad()
-            outputs=model(inputs)
-            loss=criterion(outputs,labels)
-            loss.backward()
-            optimizer.step()
+        # print(train_X) 
+        weight=get_best_weight(train_X,train_Y)
+        total_weight+=weight.numpy()
 
-            training_loss+=loss.item()*inputs.size(0)
-        
-        training_loss=training_loss/(len(train_loader)*inputs.size(0))
-        total_training_loss+=training_loss
+        outputs=linear_regression(train_X,weight)
+        outputs=torch.FloatTensor(outputs)
+        # print(outputs)
+        outputs=outputs.view([outputs.size(0),1])
 
+        loss=RMSE_loss(outputs,train_Y)
+        total_training_loss+=loss/train_X.size(0)
 
-        model.eval()
+        valid_X=[]
+        valid_Y=[]
 
-        for inputs,labels in valid_loader:
-            inputs=inputs.cuda(opt.cuda_devices)
-            labels=labels.cuda(opt.cuda_devices)
-            inputs=inputs.view([1,1])
-            labels=labels.view([1,1])
+        for i,(inputs,labels) in enumerate(valid_set):
+            valid_X.append(inputs)
+            valid_Y.append(labels)
+        newrow=np.ones(len(valid_X))
+        valid_X=np.vstack([valid_X,newrow])
+        valid_X=torch.FloatTensor(valid_X)
+        valid_Y=torch.FloatTensor(valid_Y)
+        valid_X=valid_X.t()
+        valid_Y=valid_Y.view([valid_Y.size(0),1])
 
-            outputs=model(inputs.cuda(opt.cuda_devices))
-            loss=criterion(outputs,labels)
+        outputs=linear_regression(valid_X,weight)
+        outputs=torch.FloatTensor(outputs)
+        outputs=outputs.view([outputs.size(0),1])
 
+        loss=RMSE_loss(outputs,valid_Y)
         total_valid_loss+=loss
 
-    avg_training_loss=total_training_loss/train_set.__len__()
-    avg_valid_loss=total_valid_loss/train_set.__len__()
+    best_weight=total_weight/dataset.__len__()
+    avg_training_loss=total_training_loss/dataset.__len__()
+    avg_valid_loss=total_valid_loss/dataset.__len__()
 
-    return model,avg_training_loss,avg_valid_loss
+    print(f'training_loss: {avg_training_loss:.4f}\tvalid_loss: {avg_valid_loss:.4f}\n')
 
-
-
-##########          Training          ##########
-# Linear Regression usign Leave one out as cross validation method
-def train(train_set,valid_mode):
-    input_dim=1
-    output_dim=1
-    model=LinearRegressionModel(input_dim,output_dim)
-    model=model.cuda(opt.cuda_devices)
-    model.train()
-
-    best_model_param=copy.deepcopy(model.state_dict())
-    training_loss_values=[]
-    valid_loss_values=[]
-    min_loss=float("inf")
-
-    num_epochs=opt.epoch
-
-    for epoch in range(num_epochs):
-        print(f'Epoch: {epoch+1}/{num_epochs}')
-        print('-'*len(f'Epoch: {epoch+1}/{num_epochs}'))
+    return best_weight
         
-        if valid_mode=="leave one out":
-            model,avg_training_loss,avg_valid_loss=loo_training(train_set,model)
-        elif valid_mode=="five fold":
-            # model,total_training_loss,total_valid_loss=five_fold_training(train_set,model)
-            model,avg_training_loss,avg_valid_loss=five_fold_training(train_set,model)
-
-        print(f'training_loss: {avg_training_loss:.4f}\tvalid_loss: {avg_valid_loss:.4f}\n')
-        training_loss_values.append(avg_training_loss)
-        valid_loss_values.append(avg_valid_loss)
-
-        if avg_valid_loss<min_loss:
-            min_loss=avg_valid_loss
-            min_training_loss=avg_training_loss
-            best_model_param=copy.deepcopy(model.state_dict())
-
-    model.load_state_dict(best_model_param)
-
-    print(f'min training_loss: {min_training_loss:.4f}\tmin valid_loss: {min_loss:.4f}\n')
-    
-    return model,training_loss_values,valid_loss_values
 
 def main():
+    if Path('data.csv').is_file()==False:
+        print("yes")
+        data_generator()
     data_set=RegressionDataset()
     total_sz=data_set.__len__()
     test_sz=int(0.25*total_sz)
     train_set,test_set=random_split(data_set,[total_sz-test_sz,test_sz])
 
-    # best_model,training_loss,valid_loss=train(train_set,"leave one out")
-    # loss_visualization(training_loss,valid_loss,"linear-reg-loo-loss.jpg")
-    # test(test_set,best_model)
+    weight_loo_deg1=loo_train(train_set)
+    weight_kf_deg1=kf_training(train_set)
 
-    best_model,training_loss,valid_loss=train(train_set,"five fold")
-    loss_visualization(training_loss,valid_loss,"linear-rg-kf-loss.jpg")
-    test(test_set,best_model)           
+    # weight_loo-deg5=loo_train(train_set,5)
 
-    
-
-    
-if __name__=="__main__":
+if __name__=='__main__':
     main()

@@ -6,4 +6,5 @@ def parse_args():
     parser.add_argument('--epoch', type=int, default=100, help='number of epoch to train')
     parser.add_argument('--lr',default=0.01,help='initial learning rate')
     parser.add_argument('--mode',default='leave-one-out',choices=['leave-one-out', 'five-fold'], help='leave-one-out or five-fold')
+    parser.add_argument('--root_dir',default='/home/dmplus/ML/project_1',help='root file of this project')
     return parser.parse_args()

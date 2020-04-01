@@ -42,6 +42,66 @@ def get_poly_features(x,degree):
     return poly_x
     # print
 
+def draw_fitting_plot(train_set,w_1,deg_1,legend,title,fname,w_2=None,deg_2=None,w_3=None,deg_3=None,w_4=None,deg_4=None):
+    train_X=[]
+    train_Y=[]
+
+    for i,(inputs,labels) in enumerate(train_set):
+        train_X.append(inputs)
+        train_Y.append(labels)
+    
+    train_X=np.asarray(train_X)
+    train_Y=np.asarray(train_Y)
+    plt.scatter(train_X,train_Y,facecolors='none',edgecolors='b')
+
+    X=np.linspace(-3,3,100)
+    
+    deg_1_X=get_poly_features(X,deg_1)
+    deg_1_X=np.hstack((deg_1_X,np.ones((len(deg_1_X),1))))
+    deg_1_X=torch.FloatTensor(deg_1_X)
+    w_1=torch.FloatTensor(w_1)
+    deg_1_Y=linear_regression(deg_1_X,w_1)
+    deg_1_Y=torch.FloatTensor(deg_1_Y)
+    deg_1_Y=torch.flatten(deg_1_Y)
+    plt.plot(X,deg_1_Y,'r',linewidth=0.5)
+
+    if w_2 is not None:
+        deg_2_X=get_poly_features(X,deg_2)
+        deg_2_X=np.hstack((deg_2_X,np.ones((len(deg_2_X),1))))
+        deg_2_X=torch.FloatTensor(deg_2_X)
+        w_2=torch.FloatTensor(w_2)
+        deg_2_Y=linear_regression(deg_2_X,w_2)
+        deg_2_Y=torch.FloatTensor(deg_2_Y)
+        deg_2_Y=torch.flatten(deg_2_Y)
+        plt.plot(X,deg_2_Y,'g',linewidth=0.5)
+
+    if w_3 is not None:
+        deg_3_X=get_poly_features(X,deg_3)
+        deg_3_X=np.hstack((deg_3_X,np.ones((len(deg_3_X),1))))
+        deg_3_X=torch.FloatTensor(deg_3_X)
+        w_3=torch.FloatTensor(w_3)
+        deg_3_Y=linear_regression(deg_3_X,w_3)
+        deg_3_Y=torch.FloatTensor(deg_3_Y)
+        deg_3_Y=torch.flatten(deg_3_Y)
+        plt.plot(X,deg_3_Y,'c',linewidth=0.5)
+    
+    if w_4 is not None:
+        deg_4_X=get_poly_features(X,deg_4)
+        deg_4_X=np.hstack((deg_4_X,np.ones((len(deg_4_X),1))))
+        deg_4_X=torch.FloatTensor(deg_4_X)
+        w_4=torch.FloatTensor(w_4)
+        deg_4_Y=linear_regression(deg_4_X,w_4)
+        deg_4_Y=torch.FloatTensor(deg_4_Y)
+        deg_4_Y=torch.flatten(deg_4_Y)
+        plt.plot(X,deg_4_Y,'m',linewidth=0.5)
+    
+    plt.legend(legend,fontsize=16)
+    plt.xlabel('x',fontsize=14)
+    plt.ylabel('y',fontsize=14)
+    plt.title(title,fontsize=14)
+    plt.savefig(fname)
+    
+
 def test(test_set,degree,weight):
     test_X=[]
     test_Y=[]
@@ -228,6 +288,11 @@ def main():
     print("Regression Five Fold Degree 14 20 Data Points")
     weight_kf_deg14=kf_training(train_set,14)
     test(test_set,14,weight_kf_deg14)
+
+    draw_fitting_plot(train_set,weight_loo_deg1,1,['degree=1','degree=5','degree=10','degree=14'],'Linear Data Live One Out Curve','./figure/linear-loo.jpg',weight_loo_deg5,5,weight_loo_deg10,10,weight_loo_deg14,14)
+    draw_fitting_plot(train_set,weight_kf_deg1,1,['degree=1','degree=5','degree=10','degree=14'],'Linear Data Five Folds Curve','./figure/linear-kf.jpg',weight_kf_deg5,5,weight_kf_deg10,10,weight_kf_deg14,14)
+
+
 
 if __name__=='__main__':
     main()

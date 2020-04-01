@@ -1,0 +1,92 @@
+Regression Linear Leave One Out Degree 1 20 Data Points
+training_loss: 0.0591	valid_loss: 0.6960
+testing_loss: 0.1779
+
+Regression Linear Five Fold Degree 1 20 Data Points
+training_loss: 0.5350	valid_loss: 0.8923
+testing_loss: 0.2477
+
+Regression Linear Leave One Out Degree 5 20 Data Points
+training_loss: 0.0538	valid_loss: 1.1657
+testing_loss: 0.1513
+
+Regression Linear Five Fold Degree 5 20 Data Points
+training_loss: 0.5363	valid_loss: 0.9266
+testing_loss: 0.2648
+
+Regression Linear Leave One Out Degree 10 20 Data Points
+training_loss: 0.2542	valid_loss: 35.4669
+testing_loss: 2.9379
+
+Regression Linear Five Fold Degree 10 20 Data Points
+training_loss: 0.5517	valid_loss: 7.8812
+testing_loss: 2.8535
+
+Regression Linear Leave One Out Degree 14 20 Data Points
+training_loss: 0.1185	valid_loss: 15.1026
+testing_loss: 0.1128
+
+Regression Linear Five Fold Degree 14 20 Data Points
+training_loss: 0.5611	valid_loss: 9.5415
+testing_loss: 0.5596
+
+Regression Sine Leave One Out Degree 5 20 Data Points
+training_loss: 0.0027	valid_loss: 0.0554
+testing_loss: 0.0136
+
+Regression Sine Five Fold Degree 5 20 Data Points
+training_loss: 0.0999	valid_loss: 0.1106
+testing_loss: 0.0628
+
+Regression Sine Leave One Out Degree 10 20 Data Points
+training_loss: 0.0801	valid_loss: 1.1556
+testing_loss: 0.1330
+
+Regression Sine Five Fold Degree 10 20 Data Points
+training_loss: 0.3230	valid_loss: 0.3568
+testing_loss: 0.2660
+
+Regression Sine Leave One Out Degree 14 20 Data Points
+training_loss: 0.3034	valid_loss: 4.3546
+testing_loss: 1.2098
+
+Regression Sine Five Fold Degree 14 20 Data Points
+training_loss: 0.1606	valid_loss: 0.7992
+testing_loss: 0.3423
+
+Regression Linear Leave One Out Degree 14 60 Data Points
+training_loss: 0.0306	valid_loss: 2.0622
+testing_loss: 0.0928
+
+Regression Linear Five Fold Degree 14 60 Data Points
+training_loss: 0.1279	valid_loss: 0.2387
+testing_loss: 2139.6487
+
+Regression Linear Leave One Out Degree 14 160 Data Points
+training_loss: 0.0190	valid_loss: 3.3542
+testing_loss: 0.0258
+
+Regression Linear Five Fold Degree 14 160 Data Points
+training_loss: 0.0205	valid_loss: 0.0724
+testing_loss: 0.0256
+
+Regression Linear Leave One Out Degree 14 320 Data Points
+training_loss: 0.0464	valid_loss: 1.1980
+testing_loss: 0.0322
+
+Regression Linear Five Fold Degree 14 320 Data Points
+training_loss: 0.0077	valid_loss: 0.0156
+testing_loss: 0.0328
+
+Regularization 0.001/m Linear Five Fold Degree 14 20 Data Points
+training_loss: 0.5578	valid_loss: 9.6800
+testing_loss: 966.1201
+
+Regularization 1/m Linear Five Fold Degree 14 20 Data Points
+training_loss: 5.2470	valid_loss: 45.2341
+testing_loss: 966.3683
+
+Regularization 1000/m Linear Five Fold Degree 14 20 Data Points
+training_loss: 0.8210	valid_loss: 255.8676
+testing_loss: 964.6821
+

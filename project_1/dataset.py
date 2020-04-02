@@ -6,15 +6,18 @@ from torch.utils.data import Dataset,DataLoader,Subset
 from pathlib import Path
 from opt import parse_args
 
+
 opt=parse_args()
 
+
+# generate data points as dataset
 def data_generator(mode,fname,nums):
-    if mode=='linear':
+    if mode=='linear':  # linear data
         x=np.linspace(-3,3,nums)
         epsilon=[gauss(0,1) for i in range(nums)]
         y=2*x+epsilon
 
-    elif mode=='sin':
+    elif mode=='sin':   # sine curve data
         x=np.linspace(0,1,nums)
         epsilon=[gauss(0,0.04) for i in range(nums)]
         y=np.sin(2*np.pi*x)+epsilon
@@ -24,6 +27,7 @@ def data_generator(mode,fname,nums):
     for i in range(nums):
         writer.writerow([x[i],y[i]])
 
+# Dataset class
 class RegressionDataset(Dataset):
     def __init__(self,fname):
         data=np.genfromtxt(fname,delimiter=',')

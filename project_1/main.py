@@ -11,11 +11,13 @@ from opt import parse_args
 opt=parse_args()
 
 
+# Using RMSE loss as loss function
 def RMSE_loss(yhat,y):
     mse=((yhat - y) ** 2).sum() / yhat.data.nelement()
     return torch.sqrt(mse)
 
 
+# Perform Linear Regression AX=b
 def linear_regression(x,weight):
     outputs=[]
     for i in x:
@@ -32,12 +34,13 @@ def linear_regression(x,weight):
     return weight"""
 
 
+# Get the best weight by the formulat mention in the course
 def get_best_weight(x,y,_lambda=0):
     x_t=x.t()
 
     if _lambda==0:
         pseudo_inv=torch.inverse(x_t.mm(x))
-    else:
+    else:   # if regularization is needed
         mat=x_t.mm(x)
         I=torch.eye(mat.size(0))
         pseudo_inv=torch.inverse(mat+_lambda*I)
@@ -45,6 +48,8 @@ def get_best_weight(x,y,_lambda=0):
     weight=torch.mm(pseudo_inv.mm(x_t),y)
     return weight
 
+
+# get polynomial features when polynomial regression with degree>1
 def get_poly_features(x,degree):
     poly_x=[]
     for each_x in x:
@@ -53,6 +58,7 @@ def get_poly_features(x,degree):
     return poly_x
 
 
+# draw the fitting plot
 def draw_fitting_plot(train_set,range,w_1,deg_1,legend,title,fname,w_2=None,deg_2=None,w_3=None,deg_3=None,w_4=None,deg_4=None):
     train_X=[]
     train_Y=[]
@@ -114,6 +120,7 @@ def draw_fitting_plot(train_set,range,w_1,deg_1,legend,title,fname,w_2=None,deg_
     plt.clf()
     
 
+# Testing
 def test(test_set,degree,weight):
     test_X=[]
     test_Y=[]
@@ -140,6 +147,7 @@ def test(test_set,degree,weight):
     print(f'testing_loss: {avg_test_loss:.4f}\n')
 
 
+# Training when the cross validation is five folds
 def kf_train(dataset,degree=1,_lambda=0):
     kf=KFold(n_splits=5,random_state=None,shuffle=False)
 
@@ -147,13 +155,14 @@ def kf_train(dataset,degree=1,_lambda=0):
     total_valid_loss=0.0
     total_weight=np.empty((degree+1,1))
 
-    for train_idx,valid_idx in kf.split(dataset):
+    for train_idx,valid_idx in kf.split(dataset):   # Split the data to train and valid
         train_set=Subset(dataset,train_idx)
         valid_set=Subset(dataset,valid_idx)
 
         train_X=[]
         train_Y=[]
 
+        ##########          training          ##########
         for i,(inputs,labels) in enumerate(train_set):
             train_X.append(inputs)
             train_Y.append(labels)
@@ -176,6 +185,7 @@ def kf_train(dataset,degree=1,_lambda=0):
         valid_X=[]
         valid_Y=[]
 
+        ##########          validation          ########## 
         for i,(inputs,labels) in enumerate(valid_set):
             valid_X.append(inputs)
             valid_Y.append(labels)
@@ -201,6 +211,7 @@ def kf_train(dataset,degree=1,_lambda=0):
     return best_weight
 
 
+# Training when the cross validation is leave one out
 def loo_train(dataset,degree=1,_lambda=0):
     loo=LeaveOneOut()
 
@@ -208,13 +219,14 @@ def loo_train(dataset,degree=1,_lambda=0):
     total_valid_loss=0.0
     total_weight=np.zeros((degree+1,1))
 
-    for train_idx,valid_idx in loo.split(dataset):
+    for train_idx,valid_idx in loo.split(dataset):  # split the data to train and valid
         train_set=Subset(dataset,train_idx)
         valid_set=Subset(dataset,valid_idx)
 
         train_X=[]
         train_Y=[]
 
+        ##########          training          ##########
         for i,(inputs,labels) in enumerate(train_set):
             train_X.append(inputs)
             train_Y.append(labels) 
@@ -238,6 +250,7 @@ def loo_train(dataset,degree=1,_lambda=0):
         valid_X=[]
         valid_Y=[]
 
+        ##########          validation          ##########
         for i,(inputs,labels) in enumerate(valid_set):
             valid_X.append(inputs)
             valid_Y.append(labels)
@@ -264,6 +277,8 @@ def loo_train(dataset,degree=1,_lambda=0):
         
 
 def main():
+
+    ##########          Linear Regression with degree=1,5,10,14          ##########
     if Path('./data/data.csv').is_file()==False:
         data_generator('linear','./data/data.csv',20)
 
@@ -310,6 +325,7 @@ def main():
     draw_fitting_plot(train_set,[-3,3],weight_loo_deg1,1,['degree=1','degree=5','degree=10','degree=14'],'Linear Data Live One Out Curve','./figure/linear-loo.jpg',weight_loo_deg5,5,weight_loo_deg10,10,weight_loo_deg14,14)
     draw_fitting_plot(train_set,[-3,3],weight_kf_deg1,1,['degree=1','degree=5','degree=10','degree=14'],'Linear Data Five Folds Curve','./figure/linear-kf.jpg',weight_kf_deg5,5,weight_kf_deg10,10,weight_kf_deg14,14)
 
+    ##########          Linear Regression on Sine Curve Data with degree=5,10,14          ##########
     if Path('./data/sine_data.csv').is_file()==False:
         data_generator('sin','./data/sin_data.csv',20)
 
@@ -345,6 +361,7 @@ def main():
     draw_fitting_plot(train_set,[0,1],weight_loo_deg5,5,['degree=5','degree=10','degree=14'],'Sine Data Live One Out Curve','./figure/sine-loo.jpg',weight_loo_deg10,10,weight_loo_deg14,14)
     draw_fitting_plot(train_set,[0,1],weight_kf_deg5,5,['degree=5','degree=10','degree=14'],'Sine Data Five Folds Curve','./figure/sine-kf.jpg',weight_kf_deg10,10,weight_kf_deg14,14)
 
+    ##########          Linear Regression on Different Training Data Size          ##########  
     if Path('./data/data_320.csv').is_file()==False:
         data_generator('linear','./data/data_320.csv',320)
     
@@ -400,6 +417,7 @@ def main():
     draw_fitting_plot(origin_train_set,[-3,3],weight_loo_data60,14,['m=60','m=160','m=320'],'Linear Data Different m Live One Out Curve','./figure/data-m-loo.jpg',weight_loo_data160,14,weight_loo_data320,14)
     draw_fitting_plot(origin_train_set,[-3,3],weight_kf_data60,14,['m=60','m=160','m=320'],'Linear Data Different m Five Folds Curve','./figure/data-m-kf.jpg',weight_kf_data160,14,weight_kf_data320,14)
 
+    ##########          Linear Regression with Regularization Term lambda          ##########
     print('Regularization 0.001/m Linear Five Fold Degree 14 20 Data Points')
     _lambda=0.001/20
     weight_kf_0001l=kf_train(origin_train_set,14,_lambda)

@@ -326,7 +326,7 @@ def main():
     draw_fitting_plot(train_set,[-3,3],weight_kf_deg1,1,['degree=1','degree=5','degree=10','degree=14'],'Linear Data Five Folds Curve','./figure/linear-kf.jpg',weight_kf_deg5,5,weight_kf_deg10,10,weight_kf_deg14,14)
 
     ##########          Linear Regression on Sine Curve Data with degree=5,10,14          ##########
-    if Path('./data/sine_data.csv').is_file()==False:
+    if Path('./data/sin_data.csv').is_file()==False:
         data_generator('sin','./data/sin_data.csv',20)
 
     data_set=RegressionDataset('./data/sin_data.csv')
